@@ -1,6 +1,6 @@
 # KamLynk
 
-[English](README.md) · **Português**
+[English](README.md) · **Português** · Site: <https://dionatansimioni.github.io/KamLynk/pt/>
 
 Controle remoto para câmeras Sony no Linux: prévia ao vivo, gravar/parar, exposição
 (abertura, obturador, ISO, EV), foco (toque para focar, foco manual), zoom, balanço de branco,

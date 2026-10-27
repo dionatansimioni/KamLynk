@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dionatansimioni.github.io/KamLynk/sitemap.xml

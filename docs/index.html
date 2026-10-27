@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KamLynk: Sony camera remote control for Linux (ZV-E10 II)</title>
+<meta name="description" content="Free, open-source app to control Sony cameras from Linux: live preview, recording, exposure, focus and photo transfer over Wi-Fi or USB. Made for the ZV-E10 II.">
+<meta name="keywords" content="Sony camera remote Linux, ZV-E10 II Linux, Sony Camera Remote SDK, tethering Linux, camera remote control, vlog, AppImage">
+<meta name="author" content="Dionatan Simioni">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#111214">
+<link rel="canonical" href="https://dionatansimioni.github.io/KamLynk/">
+<link rel="alternate" hreflang="en" href="https://dionatansimioni.github.io/KamLynk/">
+<link rel="alternate" hreflang="pt-BR" href="https://dionatansimioni.github.io/KamLynk/pt/">
+<link rel="alternate" hreflang="x-default" href="https://dionatansimioni.github.io/KamLynk/">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/style.css">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="KamLynk">
+<meta property="og:title" content="KamLynk: Sony camera remote control for Linux">
+<meta property="og:description" content="Live preview, recording, exposure, focus and photo transfer for the Sony ZV-E10 II and other Sony cameras, on Linux. Free and open source.">
+<meta property="og:url" content="https://dionatansimioni.github.io/KamLynk/">
+<meta property="og:image" content="https://dionatansimioni.github.io/KamLynk/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="KamLynk app window showing a live camera preview and exposure controls">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="KamLynk: Sony camera remote control for Linux">
+<meta name="twitter:description" content="Control your Sony camera from Linux: live preview, recording, exposure, focus and photo transfer.">
+<meta name="twitter:image" content="https://dionatansimioni.github.io/KamLynk/assets/og-image.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "KamLynk",
+  "description": "Remote control for Sony cameras on Linux: live preview, recording, exposure, focus, zoom and photo transfer over Wi-Fi or USB.",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Linux (x86_64, glibc 2.34+)",
+  "softwareVersion": "0.7",
+  "url": "https://dionatansimioni.github.io/KamLynk/",
+  "downloadUrl": "https://github.com/dionatansimioni/KamLynk/releases/latest",
+  "screenshot": "https://dionatansimioni.github.io/KamLynk/screenshots/shoot.png",
+  "image": "https://dionatansimioni.github.io/KamLynk/assets/og-image.png",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "inLanguage": ["en", "pt-BR"],
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Dionatan Simioni", "url": "https://github.com/dionatansimioni" },
+  "codeRepository": "https://github.com/dionatansimioni/KamLynk"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Is KamLynk free?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. KamLynk is free and open source under the MIT license." } },
+    { "@type": "Question", "name": "Which cameras does KamLynk support?",
+      "acceptedAnswer": { "@type": "Answer", "text": "It is made and tested with the Sony ZV-E10 II. It uses Sony's Camera Remote SDK, so other Sony cameras supported by the SDK should also work; the interface only shows the settings the connected camera reports." } },
+    { "@type": "Question", "name": "Does KamLynk work over Wi-Fi and USB?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Wi-Fi through your router is recommended; Wi-Fi Direct and USB also work." } },
+    { "@type": "Question", "name": "Is KamLynk made by Sony?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. KamLynk is an independent project, not affiliated with, endorsed or supported by Sony." } }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="./" aria-label="KamLynk home">
+      <img src="assets/logo.svg" alt="" width="34" height="34">
+      KamLynk
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a class="nav-link" href="#features">Features</a>
+      <a class="nav-link" href="#get-started">Get started</a>
+      <a class="nav-link" href="#faq">FAQ</a>
+      <a class="nav-link" href="https://github.com/dionatansimioni/KamLynk">GitHub</a>
+      <span class="lang-switch" aria-label="Language">
+        <span aria-current="page">EN</span>
+        <a href="pt/" hreflang="pt-BR" lang="pt-BR">PT</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="container">
+      <div>
+        <span class="eyebrow"><span class="dot" aria-hidden="true"></span> Free and open source · Linux</span>
+        <h1>Control your Sony camera <span class="accent">from Linux</span></h1>
+        <p class="lead">KamLynk turns your PC into a monitor and remote for your Sony camera: live preview, start and stop recording, adjust exposure and focus, and transfer photos, over Wi-Fi or USB. Made for the <strong>ZV-E10 II</strong>.</p>
+        <div class="cta">
+          <a class="btn btn-primary" data-download href="https://github.com/dionatansimioni/KamLynk/releases/download/v0.7/KamLynk-0.7-x86_64.AppImage">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+            Download AppImage <span data-version>0.7</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/dionatansimioni/KamLynk">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+            Source code on GitHub
+          </a>
+        </div>
+        <p class="cta-note">x86_64 · Ubuntu, Debian, Fedora, Mint, Arch, openSUSE and more · <span data-size>52 MB</span></p>
+      </div>
+      <div class="shot">
+        <img src="screenshots/shoot.png" width="1360" height="820" alt="KamLynk window: live preview from the camera, record and photo buttons, and exposure and focus settings on the side" fetchpriority="high">
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="alt">
+    <div class="container">
+      <div class="section-head">
+        <h2>Everything you need while filming yourself</h2>
+        <p>Use your computer screen as a big monitor and change camera settings without touching the camera. The interface adapts to what your camera supports.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="13" rx="2"/><path d="M8 21h8M12 17.5V21"/></svg></div>
+          <h3>Smooth live preview</h3>
+          <p>GPU-accelerated preview with full screen, rule-of-thirds grid and mirroring for framing yourself.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5" fill="currentColor"/></svg></div>
+          <h3>Record and take photos</h3>
+          <p>Start and stop recording (R) with alerts if the camera stops; take photos (Space) and get them on your PC.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m14.3 3.3-5 8.7M20.6 9.5h-10M18.3 17.5l-5-8.7M9.7 20.7l5-8.7M3.4 14.5h10M5.7 6.5l5 8.7"/></svg></div>
+          <h3>Exposure and focus</h3>
+          <p>Mode, aperture, shutter, ISO and EV; touch to focus on the preview, manual focus, focus area and subject recognition.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></div>
+          <h3>Color and video settings</h3>
+          <p>White balance, Creative Look, Picture Profile, Cinematic Vlog, format, quality, frame rate, audio and zoom.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></svg></div>
+          <h3>Wi-Fi or USB</h3>
+          <p>Connects through your router, Wi-Fi Direct or cable, remembers your cameras and reconnects automatically.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></div>
+          <h3>Private by design</h3>
+          <p>No account, no telemetry, no internet needed. Camera logins stay in your system keychain.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="get-started">
+    <div class="container">
+      <div class="section-head">
+        <h2>Get started in a few minutes</h2>
+        <p>No installation needed: KamLynk is a single AppImage file that runs on most Linux distributions.</p>
+      </div>
+      <div class="steps">
+        <article class="card step">
+          <h3>Download and run</h3>
+          <ol>
+            <li>Download the <a data-download href="https://github.com/dionatansimioni/KamLynk/releases/download/v0.7/KamLynk-0.7-x86_64.AppImage">AppImage</a>.</li>
+            <li>Make it executable: <code>chmod +x KamLynk-*.AppImage</code> (or right-click › Properties › allow running as a program).</li>
+            <li>Open it. KamLynk adds itself to your applications menu.</li>
+          </ol>
+        </article>
+        <article class="card step">
+          <h3>Prepare the camera</h3>
+          <ol>
+            <li>MENU › Network › Wi-Fi › <em>Access Point Set.</em>: join the same network as the PC.</li>
+            <li>MENU › Network › Cnct./PC Remote › <em>PC Remote Function</em> › <strong>PC Remote: On</strong>.</li>
+          </ol>
+        </article>
+        <article class="card step">
+          <h3>Connect</h3>
+          <ol>
+            <li>Click <em>Search for cameras</em> and pick your camera.</li>
+            <li>Enter the user name and password shown on the camera (Access Authen.), once.</li>
+            <li>Prefer USB? Choose USB as the connection method and click <em>Allow USB access</em>.</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="container compat">
+      <div>
+        <div class="section-head">
+          <h2>Cameras</h2>
+          <p>Made and tested with the Sony ZV-E10 II. KamLynk uses Sony's Camera Remote SDK, so other models it supports should also work, for example:</p>
+        </div>
+        <ul class="tags" aria-label="Cameras">
+          <li>ZV-E10 II</li><li>ZV-E1</li><li>α6700</li><li>α7 IV</li><li>α7C II</li><li>α7S III</li><li>α1</li><li>FX3</li><li>FX30</li>
+        </ul>
+      </div>
+      <div>
+        <div class="section-head">
+          <h2>Linux distributions</h2>
+          <p>Any x86_64 distribution with glibc 2.34 or newer, on X11 or Wayland:</p>
+        </div>
+        <ul class="tags" aria-label="Linux distributions">
+          <li>Ubuntu 22.04+</li><li>Linux Mint 21+</li><li>Debian 12+</li><li>Fedora 35+</li><li>RHEL / Alma / Rocky 9+</li><li>openSUSE</li><li>Arch Linux</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="container">
+      <div class="section-head"><h2>Frequently asked questions</h2></div>
+      <div class="faq">
+        <details>
+          <summary>Is KamLynk free?</summary>
+          <p>Yes. KamLynk is free and open source under the MIT license. The code is on <a href="https://github.com/dionatansimioni/KamLynk">GitHub</a>.</p>
+        </details>
+        <details>
+          <summary>Which cameras does KamLynk support?</summary>
+          <p>It is made and tested with the Sony ZV-E10 II. It uses Sony's Camera Remote SDK, so other Sony cameras supported by the SDK should also work; the interface only shows the settings the connected camera reports.</p>
+        </details>
+        <details>
+          <summary>Does it work over Wi-Fi and USB?</summary>
+          <p>Yes. Wi-Fi through your router is recommended; Wi-Fi Direct and USB also work. For USB, KamLynk installs a device rule once, asking for the administrator password.</p>
+        </details>
+        <details>
+          <summary>Can I use it as a webcam in OBS?</summary>
+          <p>Not yet. KamLynk is a remote and monitor for the camera; for streaming, an HDMI capture device gives the best quality.</p>
+        </details>
+        <details>
+          <summary>Is KamLynk made by Sony?</summary>
+          <p>No. KamLynk is an independent project, not affiliated with, endorsed or supported by Sony. On first start it shows the terms required by Sony's SDK (camera warranty and prohibited uses).</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt download-band">
+    <div class="container">
+      <div class="section-head">
+        <h2>Ready to try it?</h2>
+        <p>Download KamLynk <span data-version>0.7</span> for Linux. It's free.</p>
+      </div>
+      <div class="cta">
+        <a class="btn btn-primary" data-download href="https://github.com/dionatansimioni/KamLynk/releases/download/v0.7/KamLynk-0.7-x86_64.AppImage">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+          Download AppImage
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/dionatansimioni/KamLynk/releases">All releases</a>
+      </div>
+      <p class="checksum">Checksums (SHA-256) and release notes are on the <a href="https://github.com/dionatansimioni/KamLynk/releases/latest">release page</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <a class="brand" href="./"><img src="assets/logo.svg" alt="" width="34" height="34"> KamLynk</a>
+      <ul class="footer-links">
+        <li><a href="https://github.com/dionatansimioni/KamLynk">GitHub</a></li>
+        <li><a href="https://github.com/dionatansimioni/KamLynk/releases">Releases</a></li>
+        <li><a href="https://github.com/dionatansimioni/KamLynk/issues">Report a problem</a></li>
+        <li><a href="https://github.com/dionatansimioni/KamLynk/blob/main/LICENSE">MIT License</a></li>
+        <li><a href="https://github.com/dionatansimioni/KamLynk/blob/main/THIRD_PARTY_NOTICES.md">Third-party notices</a></li>
+        <li><a href="pt/" hreflang="pt-BR" lang="pt-BR">Português</a></li>
+      </ul>
+    </div>
+    <p><span class="also">Also check out <a href="https://diolinux.com.br">diolinux.com.br</a></span></p>
+    <p class="disclaimer">© 2026 Dionatan Simioni. KamLynk is an independent project, not affiliated with, endorsed or supported by Sony. Sony, ZV-E10 and related names are trademarks of Sony Group Corporation or its affiliates.</p>
+  </div>
+</footer>
+
+<div id="lang-hint" class="lang-hint" role="status" lang="pt-BR">
+  <span>Este site também está em <a href="pt/" hreflang="pt-BR">português</a>.</span>
+  <button type="button" aria-label="Fechar">×</button>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
