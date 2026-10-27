@@ -1,0 +1,11 @@
+/build*/
+/dist/
+/AppDir/
+*.AppImage
+# Sony SDK: not redistributable. Kept locally; see scripts/setup-sdk.sh
+/CrSDK_*.zip
+/third_party/crsdk/
+CMakeLists.txt.user
+/build-deps/
+# Built by scripts/build-libxml2.sh
+/third_party/libxml2/

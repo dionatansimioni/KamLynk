@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KamLynk
+GenericName=Controle remoto de câmera
+Comment=Controle câmeras Sony pelo Wi-Fi ou USB: prévia, gravação, exposição e foco
+Exec=kamlynk
+Icon=kamlynk
+Terminal=false
+Categories=AudioVideo;Video;Photography;
+Keywords=sony;camera;zv-e10;remote;live view;
+StartupWMClass=kamlynk
