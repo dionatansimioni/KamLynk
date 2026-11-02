@@ -65,7 +65,7 @@ applies immediately.
 KamLynk talks only to your camera. It sends no telemetry and does not connect to the internet.
 
 - Preferences and the list of known cameras: `~/.config/KamLynk/kamlynk.ini`
-- Log for bug reports: `~/.local/share/KamLynk/kamlynk.log`
+- Log for bug reports: turn on Settings › Debugging › "Record a debug log"; it is written to `~/.local/share/KamLynk/kamlynk.log`
 - Camera logins ("Remember user name and password") are stored only in the system keychain
   (KWallet / GNOME Keyring), tied to the camera's SSH fingerprint, so a saved login is never
   sent to a different camera. "✕" in the camera list forgets the camera and its login.

@@ -65,7 +65,7 @@ na hora.
 O KamLynk só conversa com a sua câmera. Não envia telemetria e não acessa a internet.
 
 - Preferências e lista de câmeras conhecidas: `~/.config/KamLynk/kamlynk.ini`
-- Log para relatar problemas: `~/.local/share/KamLynk/kamlynk.log`
+- Log para relatar problemas: ligue Configurações › Depuração › "Registrar log de depuração"; ele é gravado em `~/.local/share/KamLynk/kamlynk.log`
 - Logins das câmeras ("Lembrar usuário e senha") ficam só no chaveiro do sistema
   (KWallet / GNOME Keyring), associados à impressão digital SSH da câmera: um login salvo
   nunca é enviado a outra câmera. O "✕" na lista de câmeras esquece a câmera e o login.
