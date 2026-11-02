@@ -124,9 +124,16 @@ int main(int argc, char *argv[])
         const QString dataHome = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
         const QByteArray svg = icon.open(QIODevice::ReadOnly) ? icon.readAll() : QByteArray();
         if (kl::desktop::install(appImage, dataHome, svg, &error))
-            qInfo().noquote() << "desktop entry installed for" << appImage;
+            qInfo().noquote() << "desktop entry updated for" << appImage;
         else if (!error.isEmpty())
             qWarning().noquote() << "desktop entry:" << error;
+        // Installed by Gear Lever & co.: the window must point at their entry, or KDE shows
+        // the launcher and the running window as two taskbar icons.
+        const QString external = kl::desktop::externalEntry(appImage, dataHome);
+        if (!external.isEmpty()) {
+            qInfo().noquote() << "desktop entry provided by another tool:" << external;
+            QGuiApplication::setDesktopFileName(external);
+        }
     }
     QQuickStyle::setStyle(QStringLiteral("Material"));
 

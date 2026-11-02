@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QSaveFile>
+#include <QStringList>
 
 namespace kl::desktop {
 
@@ -33,7 +34,56 @@ bool writeIfChanged(const QString &path, const QByteArray &content, bool *change
     return true;
 }
 
+const QString kOwnEntry = QStringLiteral("kamlynk.desktop");
+const QByteArray kOwnMarker = QByteArrayLiteral("X-KamLynk-AppImage=true");
+
+QByteArray readFile(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+// True when one of the entry's Exec=/TryExec= lines runs `paths` (quoted or not, with or
+// without arguments and environment variables in front).
+bool runs(const QByteArray &entry, const QStringList &paths)
+{
+    for (const QByteArray &raw : entry.split('\n')) {
+        const QByteArray line = raw.trimmed();
+        if (!line.startsWith("Exec=") && !line.startsWith("TryExec="))
+            continue;
+        const QString value = QString::fromUtf8(line.mid(line.indexOf('=') + 1));
+        for (const QString &path : paths) {
+            const qsizetype at = value.indexOf(path);
+            if (at < 0)
+                continue;
+            // Whole path only: "/a/kamlynk.appimage" must not match "/a/kamlynk.appimage.bak".
+            const qsizetype end = at + path.size();
+            if (end == value.size() || value.at(end).isSpace() || value.at(end) == u'\''
+                || value.at(end) == u'"')
+                return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
+
+QString externalEntry(const QString &appImagePath, const QString &dataHome)
+{
+    QStringList paths{appImagePath};
+    const QString canonical = QFileInfo(appImagePath).canonicalFilePath();
+    if (!canonical.isEmpty() && canonical != appImagePath)
+        paths << canonical;
+    const QDir dir(QDir(dataHome).filePath(QStringLiteral("applications")));
+    const QStringList files = dir.entryList({QStringLiteral("*.desktop")}, QDir::Files, QDir::Name);
+    for (const QString &name : files) {
+        const QByteArray entry = readFile(dir.filePath(name));
+        if (entry.contains(kOwnMarker) || !runs(entry, paths))
+            continue;
+        return name.chopped(int(sizeof(".desktop") - 1));
+    }
+    return {};
+}
 
 QString desktopEntry(const QString &appImagePath)
 {
@@ -57,8 +107,19 @@ bool install(const QString &appImagePath, const QString &dataHome, const QByteAr
 {
     bool changed = false;
     const QDir home(dataHome);
-    if (!writeIfChanged(home.filePath(QStringLiteral("applications/kamlynk.desktop")),
-                        desktopEntry(appImagePath).toUtf8(), &changed, error))
+    const QString ownPath = home.filePath(QStringLiteral("applications/") + kOwnEntry);
+    const QByteArray current = readFile(ownPath);
+    const bool ours = current.isEmpty() || current.contains(kOwnMarker);
+    if (!externalEntry(appImagePath, dataHome).isEmpty()) {
+        // Integrated by another tool: a second entry would duplicate the app in menus,
+        // in that tool and in the taskbar.
+        if (ours && QFile::exists(ownPath) && QFile::remove(ownPath))
+            return true;
+        return false;
+    }
+    if (!ours)
+        return false; // someone else's kamlynk.desktop (for another copy of the app)
+    if (!writeIfChanged(ownPath, desktopEntry(appImagePath).toUtf8(), &changed, error))
         return false;
     if (!iconSvg.isEmpty()
         && !writeIfChanged(home.filePath(QStringLiteral("icons/hicolor/scalable/apps/kamlynk.svg")), iconSvg,
