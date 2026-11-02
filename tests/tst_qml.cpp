@@ -4,6 +4,7 @@
 #include "core/CameraController.h"
 #include "core/CredentialStore.h"
 #include "core/FakeBackend.h"
+#include "core/DebugLog.h"
 #include "core/Language.h"
 
 #include "CrDeviceProperty.h"
@@ -52,6 +53,7 @@ class TestQml : public QObject
     kl::FakeBackend *m_fake = nullptr;
     kl::CameraController *m_ctl = nullptr;
     kl::Language *m_language = nullptr;
+    kl::DebugLog *m_debugLog = nullptr;
     QQmlApplicationEngine *m_engine = nullptr;
     QQuickWindow *m_window = nullptr;
 
@@ -81,7 +83,8 @@ private slots:
         m_ctl->setDownloadDirectory(m_dir.path());
         // The assertions below use the Portuguese texts, whatever the test machine's language.
         m_language = new kl::Language(nullptr, QLocale(QLocale::Portuguese, QLocale::Brazil), this);
-        kl::registerQmlTypes(m_ctl, m_language);
+        m_debugLog = new kl::DebugLog(m_dir.filePath(QStringLiteral("debug.log")), nullptr, this);
+        kl::registerQmlTypes(m_ctl, m_language, m_debugLog);
         m_engine = new QQmlApplicationEngine(this);
         kl::retranslateOnLanguageChange(m_language, m_engine, m_ctl);
         m_engine->loadFromModule("KamLynk", "Main");
@@ -288,6 +291,30 @@ private slots:
         m_language->setChoice({});
     }
 
+    void debugLogSwitchInSettings()
+    {
+        auto *button = m_window->findChild<QQuickItem *>(QStringLiteral("settingsButton"));
+        auto *dialog = m_window->findChild<QObject *>(QStringLiteral("settingsDialog"));
+        QVERIFY(button && dialog);
+        QMetaObject::invokeMethod(button, "clicked");
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        auto *toggle = findItem(m_window->contentItem(), QStringLiteral("debugLogSwitch"));
+        auto *folder = findItem(m_window->contentItem(), QStringLiteral("openLogFolder"));
+        QVERIFY(toggle && folder);
+        QVERIFY(!toggle->property("checked").toBool()); // off by default
+        QVERIFY(!folder->isVisible());
+        QMetaObject::invokeMethod(toggle, "toggle");
+        QMetaObject::invokeMethod(toggle, "toggled");
+        QVERIFY(m_debugLog->enabled());
+        QTRY_VERIFY(folder->isVisible());
+        QVERIFY(QFile::exists(m_debugLog->filePath()));
+        shot(QStringLiteral("settings-debug"));
+        m_debugLog->setEnabled(false);
+        QTRY_VERIFY(!toggle->property("checked").toBool());
+        QMetaObject::invokeMethod(dialog, "close");
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+    }
+
     void lowBatteryToastIsSilent()
     {
         auto *toast = m_window->findChild<QQuickItem *>(QStringLiteral("lowBatteryToast"));
@@ -340,6 +367,44 @@ private slots:
         m_fake->setPropertyValue(SCRSDK::CrDeviceProperty_RecordingState, SCRSDK::CrMovie_Recording_State_Not_Recording);
         QTest::qWait(50);
         QVERIFY(m_ctl->recordingError().isEmpty());
+    }
+
+    void photoProblemShowsAlert()
+    {
+        auto *alert = m_window->findChild<QQuickItem *>(QStringLiteral("recordingAlert"));
+        QVERIFY(alert);
+        QVERIFY(!alert->isVisible());
+        m_ctl->setPhotoTimeouts(300, 300);
+        m_ctl->capturePhoto(); // the demo camera is in movie mode
+        QTRY_VERIFY(alert->isVisible());
+        QVERIFY(alert->property("message").toString().contains(QStringLiteral("modo de vídeo")));
+        shot(QStringLiteral("photo-alert"));
+        m_ctl->dismissPhotoError();
+        QVERIFY(!alert->isVisible());
+    }
+
+    // A click on the preview focuses there with remote touch, or explains why it cannot.
+    void clickOnPreviewFocuses()
+    {
+        auto *view = m_window->findChild<kl::LiveViewItem *>(QStringLiteral("liveView"));
+        QVERIFY(view);
+        const QRectF r = view->imageRect();
+        const QPoint centre = view->mapToScene(r.center()).toPoint();
+        QVERIFY(m_ctl->focusPointAvailable());
+        QTest::mouseClick(m_window, Qt::LeftButton, {}, centre);
+        QTRY_VERIFY(!m_fake->setCalls().isEmpty());
+        QCOMPARE(m_fake->setCalls().last().first, quint32(SCRSDK::CrDeviceProperty_RemoteTouchOperation));
+
+        m_fake->setPropertyValue(SCRSDK::CrDeviceProperty_RemoteTouchOperationEnableStatus,
+                                 SCRSDK::CrRemoteTouchOperation_Disable);
+        m_fake->setPropertyValue(SCRSDK::CrDeviceProperty_FocusMode, SCRSDK::CrFocus_MF);
+        QTRY_VERIFY(!m_ctl->focusPointAvailable());
+        QTest::mouseClick(m_window, Qt::LeftButton, {}, centre);
+        QTRY_VERIFY(m_ctl->statusMessage().contains(QStringLiteral("MF")));
+        m_fake->setPropertyValue(SCRSDK::CrDeviceProperty_FocusMode, SCRSDK::CrFocus_AF_C);
+        m_fake->setPropertyValue(SCRSDK::CrDeviceProperty_RemoteTouchOperationEnableStatus,
+                                 SCRSDK::CrRemoteTouchOperation_Enable);
+        QTRY_VERIFY(m_ctl->touchFocusAvailable());
     }
 
     void recordButtonStartsAndStops()

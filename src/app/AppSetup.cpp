@@ -2,17 +2,19 @@
 
 #include "app/LiveViewItem.h"
 #include "core/CameraController.h"
+#include "core/DebugLog.h"
 #include "core/Language.h"
 
 #include <QQmlEngine>
 
 namespace kl {
 
-void registerQmlTypes(CameraController *controller, Language *language)
+void registerQmlTypes(CameraController *controller, Language *language, DebugLog *debugLog)
 {
     constexpr const char *uri = "KamLynk.Backend";
     qmlRegisterSingletonInstance(uri, 1, 0, "Camera", controller);
     qmlRegisterSingletonInstance(uri, 1, 0, "Language", language);
+    qmlRegisterSingletonInstance(uri, 1, 0, "DebugLog", debugLog);
     qmlRegisterUncreatableType<CameraController>(uri, 1, 0, "CameraController",
                                                  QStringLiteral("Use the Camera singleton"));
     qmlRegisterUncreatableType<CameraProperty>(uri, 1, 0, "CameraProperty",

@@ -164,6 +164,7 @@ private slots:
     void photoIsDownloaded()
     {
         connectDemo();
+        m_ctl->exposureMode()->setValue(SDK::CrExposure_M_Manual);
         QTRY_COMPARE(m_ctl->saveDestination()->rawValue(), qint64(SDK::CrStillImageStoreDestination_HostPCAndMemoryCard));
         QSignalSpy saved(m_ctl, &CameraController::photoSaved);
         m_ctl->capturePhoto();
@@ -172,6 +173,56 @@ private slots:
         QCOMPARE(m_fake->commands().last(), qMakePair(Command::Release, false));
         QVERIFY(QFileInfo::exists(m_ctl->lastDownload()));
         QVERIFY(m_ctl->lastDownload().startsWith(m_dir.path()));
+        QVERIFY(m_ctl->photoError().isEmpty());
+    }
+
+    void photoInMovieModeIsExplained()
+    {
+        connectDemo();
+        m_ctl->setPhotoTimeouts(500, 100);
+        QVERIFY(m_ctl->exposureMode()->text().contains(QStringLiteral("Filme")));
+        QSignalSpy saved(m_ctl, &CameraController::photoSaved);
+        m_ctl->capturePhoto();
+        QTRY_VERIFY(m_ctl->photoError().contains(QStringLiteral("modo de vídeo")));
+        QCOMPARE(saved.count(), 0);
+        m_ctl->dismissPhotoError();
+        QVERIFY(m_ctl->photoError().isEmpty());
+    }
+
+    void photoKeptOnCardIsExplained()
+    {
+        connectDemo();
+        m_ctl->setPhotoTimeouts(500, 100);
+        m_ctl->exposureMode()->setValue(SDK::CrExposure_M_Manual);
+        QTRY_COMPARE(m_ctl->saveDestination()->rawValue(), qint64(SDK::CrStillImageStoreDestination_HostPCAndMemoryCard));
+        // The user chose "card only" afterwards: not overridden, but explained.
+        m_ctl->saveDestination()->setValue(SDK::CrStillImageStoreDestination_MemoryCard);
+        QTRY_COMPARE(m_ctl->saveDestination()->rawValue(), qint64(SDK::CrStillImageStoreDestination_MemoryCard));
+        m_ctl->capturePhoto();
+        QTRY_VERIFY(m_ctl->photoError().contains(QStringLiteral("só no cartão")));
+    }
+
+    void photoNotTransferredIsReported()
+    {
+        connectDemo();
+        m_ctl->setPhotoTimeouts(500, 100);
+        m_fake->setTransfersPhotos(false);
+        m_ctl->exposureMode()->setValue(SDK::CrExposure_M_Manual);
+        QTRY_COMPARE(m_ctl->saveDestination()->rawValue(), qint64(SDK::CrStillImageStoreDestination_HostPCAndMemoryCard));
+        m_ctl->capturePhoto();
+        QTRY_VERIFY(m_ctl->photoError().contains(QStringLiteral("não chegou ao PC")));
+    }
+
+    void saveDestinationAdjustedOnceItIsWritable()
+    {
+        // Locked at first (as in some camera modes), unlocked later.
+        m_fake->setPropertyWritable(SDK::CrDeviceProperty_StillImageStoreDestination, false);
+        connectDemo();
+        QVERIFY(!m_ctl->saveDestination()->writable());
+        QCOMPARE(m_ctl->saveDestination()->rawValue(), qint64(SDK::CrStillImageStoreDestination_MemoryCard));
+        m_fake->setPropertyWritable(SDK::CrDeviceProperty_StillImageStoreDestination, true);
+        QTRY_COMPARE(m_ctl->saveDestination()->rawValue(),
+                     qint64(SDK::CrStillImageStoreDestination_HostPCAndMemoryCard));
     }
 
     void touchFocusPacksCoordinates()
@@ -190,9 +241,64 @@ private slots:
         m_fake->setPropertyValue(SDK::CrDeviceProperty_RemoteTouchOperationEnableStatus,
                                  SDK::CrRemoteTouchOperation_Disable);
         QTRY_VERIFY(!m_ctl->touchFocusAvailable());
+        m_ctl->touchFocus(0.5, 0.5);
+        for (const auto &call : m_fake->setCalls())
+            QVERIFY(call.first != SDK::CrDeviceProperty_RemoteTouchOperation);
+    }
+
+    // Without remote touch, a click moves the AF area: a wide area becomes a spot first.
+    void clickFocusMovesAfAreaWithoutRemoteTouch()
+    {
+        connectDemo();
+        m_fake->setPropertyValue(SDK::CrDeviceProperty_RemoteTouchOperationEnableStatus,
+                                 SDK::CrRemoteTouchOperation_Disable);
+        QTRY_VERIFY(!m_ctl->touchFocusAvailable());
+        QVERIFY(m_ctl->focusPointAvailable());
+        QCOMPARE(m_ctl->focusArea()->rawValue(), qint64(SDK::CrFocusArea_Wide));
+        m_ctl->touchFocus(0.25, 0.5);
+        QTRY_COMPARE(m_ctl->focusArea()->rawValue(), qint64(SDK::CrFocusArea_Flexible_Spot_M));
+        QTRY_COMPARE(m_fake->property(SDK::CrDeviceProperty_AF_Area_Position).current,
+                     qint64((160 << 16) | 240));
+        // Movie mode: the camera keeps focusing by itself, no half-press.
+        for (const auto &call : m_fake->setCalls())
+            QVERIFY(call.first != SDK::CrDeviceProperty_S1);
+
+        // Edges are clamped to where the AF frame fits.
+        m_ctl->touchFocus(0.0, 1.0);
+        QTRY_COMPARE(m_fake->property(SDK::CrDeviceProperty_AF_Area_Position).current,
+                     qint64((16 << 16) | 467));
+
+        // Cancel brings the user's area back.
+        m_ctl->cancelTouchFocus();
+        QTRY_COMPARE(m_ctl->focusArea()->rawValue(), qint64(SDK::CrFocusArea_Wide));
+    }
+
+    void clickFocusHalfPressesForPhotos()
+    {
+        connectDemo();
+        m_fake->setPropertyValue(SDK::CrDeviceProperty_RemoteTouchOperationEnableStatus,
+                                 SDK::CrRemoteTouchOperation_Disable);
+        m_fake->setPropertyValue(SDK::CrDeviceProperty_FocusArea, SDK::CrFocusArea_Zone);
+        m_ctl->exposureMode()->setValue(SDK::CrExposure_M_Manual);
+        QTRY_VERIFY(!m_ctl->exposureMode()->text().contains(QStringLiteral("Filme")));
+        QTRY_VERIFY(!m_ctl->touchFocusAvailable());
+        m_ctl->touchFocus(0.5, 0.5);
+        QCOMPARE(m_ctl->focusArea()->rawValue(), qint64(SDK::CrFocusArea_Zone)); // already positionable
+        QTRY_COMPARE(m_fake->property(SDK::CrDeviceProperty_S1).current, qint64(SDK::CrLockIndicator_Locked));
+        QTRY_COMPARE(m_fake->property(SDK::CrDeviceProperty_S1).current, qint64(SDK::CrLockIndicator_Unlocked));
+    }
+
+    void clickFocusIgnoredInManualFocus()
+    {
+        connectDemo();
+        m_fake->setPropertyValue(SDK::CrDeviceProperty_RemoteTouchOperationEnableStatus,
+                                 SDK::CrRemoteTouchOperation_Disable);
+        m_fake->setPropertyValue(SDK::CrDeviceProperty_FocusMode, SDK::CrFocus_MF);
+        QTRY_VERIFY(!m_ctl->focusPointAvailable());
         const int before = m_fake->setCalls().size();
         m_ctl->touchFocus(0.5, 0.5);
         QCOMPARE(m_fake->setCalls().size(), before);
+        QVERIFY(m_ctl->statusMessage().contains(QStringLiteral("MF")));
     }
 
     void focusStepIsClamped()

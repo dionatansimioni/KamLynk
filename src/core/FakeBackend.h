@@ -35,10 +35,13 @@ public:
     void setUnresponsive(bool unresponsive) { m_unresponsive = unresponsive; }
     // Password the simulated SSH camera accepts (any non-empty one when unset).
     void setRequiredPassword(const QString &password) { m_requiredPassword = password; }
+    // Photos are taken but never reach the PC (transfer problem).
+    void setTransfersPhotos(bool transfers) { m_transfersPhotos = transfers; }
     // Camera switched off / out of range: discovery does not list it.
     void setDiscoverable(bool discoverable) { m_discoverable = discoverable; }
     int connectAttempts() const { return m_connectAttempts; }
     void setPropertyValue(quint32 code, qint64 value); // simulate a change made on the camera body
+    void setPropertyWritable(quint32 code, bool writable); // e.g. locked in the current camera mode
     void emitFrame();
     void dropConnection(const QString &reason);
     void simulateReconnecting() { emit reconnecting(); }
@@ -72,6 +75,7 @@ private:
     bool m_requiresCredentials = false;
     bool m_unresponsive = false;
     bool m_discoverable = true;
+    bool m_transfersPhotos = true;
     QString m_requiredPassword;
     int m_connectAttempts = 0;
     RecordResponse m_recordResponse = RecordResponse::Normal;

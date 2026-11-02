@@ -586,6 +586,29 @@ QString propertyName(quint32 code)
     }
 }
 
+bool isMovieMode(qint64 exposureProgram)
+{
+    const auto v = static_cast<quint32>(exposureProgram);
+    return (v >= SDK::CrExposure_Movie_P && v <= SDK::CrExposure_Movie_SQMotion_F)
+        || (v >= SDK::CrExposure_HiFrameRate_P && v <= SDK::CrExposure_MOVIE)
+        || v == SDK::CrExposure_F_MovieOrSQMotion
+        || (v >= SDK::CrExposure_Movie_IntervalRec_F && v <= SDK::CrExposure_Movie_IntervalRec_AUTO);
+}
+
+bool focusAreaHasPosition(qint64 focusArea)
+{
+    switch (static_cast<quint16>(focusArea)) {
+    case SDK::CrFocusArea_Unknown:
+    case SDK::CrFocusArea_Wide:
+    case SDK::CrFocusArea_Center:
+    case SDK::CrFocusArea_Tracking_Wide:
+    case SDK::CrFocusArea_Tracking_Center:
+        return false;
+    default:
+        return true;
+    }
+}
+
 quint32 packTouchPosition(double nx, double ny)
 {
     const auto clamp01 = [](double v) { return std::isnan(v) ? 0.0 : std::clamp(v, 0.0, 1.0); };

@@ -52,6 +52,11 @@ QString format(quint32 code, qint64 value);
 // Short label for a property (e.g. "ISO", "Abertura").
 QString propertyName(quint32 code);
 
+// Exposure program modes of the movie and S&Q shooting modes (the shutter takes no photos).
+bool isMovieMode(qint64 exposureProgram);
+// Focus areas whose position can be moved (zone, spots), unlike wide/center.
+bool focusAreaHasPosition(qint64 focusArea);
+
 // Remote touch position: x in [0,639] in the upper 16 bits, y in [0,479] in the lower.
 // nx/ny are normalized [0,1] coordinates inside the live view image (clamped).
 quint32 packTouchPosition(double nx, double ny);

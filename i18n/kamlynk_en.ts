@@ -236,8 +236,8 @@ MENU › Network › Cnct./PC Remote › *Connection Method*: **USB**. Plug in t
         <translation>Click the image to focus on that spot.</translation>
     </message>
     <message>
-        <source>Cancelar foco por toque</source>
-        <translation>Cancel touch focus</translation>
+        <source>Cancelar foco por clique</source>
+        <translation>Cancel click focus</translation>
     </message>
     <message>
         <source>Foco manual (perto ↔ longe)</source>
@@ -795,6 +795,22 @@ MENU › Network › Cnct./PC Remote › *Connection Method*: **USB**. Plug in t
         <source>Idioma</source>
         <translation>Language</translation>
     </message>
+    <message>
+        <source>Depuração</source>
+        <translation>Debugging</translation>
+    </message>
+    <message>
+        <source>Registrar log de depuração</source>
+        <translation>Record a debug log</translation>
+    </message>
+    <message>
+        <source>Grava o que o app faz em um arquivo, para enviar junto com relatos de problemas. Continua ligado depois de reabrir o app. Arquivo: %1</source>
+        <translation>Writes what the app does to a file, to send along with problem reports. Stays on after the app is reopened. File: %1</translation>
+    </message>
+    <message>
+        <source>Abrir pasta do log</source>
+        <translation>Open log folder</translation>
+    </message>
 </context>
 <context>
     <name>ShootPage</name>
@@ -1073,6 +1089,34 @@ Full licenses and notices: [github.com/dionatansimioni/KamLynk](https://github.c
         <source>Verifique o cartão e se a câmera está no modo de vídeo.</source>
         <translation>Check the card and that the camera is in movie mode.</translation>
     </message>
+    <message>
+        <source>A câmera está no modo de vídeo, que não tira fotos. Mude para o modo de foto (botão de modo da câmera ou “Modo” no painel).</source>
+        <translation>The camera is in movie mode, which takes no photos. Switch to photo mode (the camera's mode button or “Mode” in the panel).</translation>
+    </message>
+    <message>
+        <source>A câmera não tirou a foto. Com foco automático ela só dispara depois de conseguir focar; confira também o cartão de memória.</source>
+        <translation>The camera did not take the photo. With autofocus it only fires once it can focus; also check the memory card.</translation>
+    </message>
+    <message>
+        <source>A foto foi salva só no cartão de memória. Para recebê-la no PC, escolha “PC + cartão” em “Salvar fotos em”.</source>
+        <translation>The photo was saved only to the memory card. To get it on the PC, choose “PC + card” in “Save photos to”.</translation>
+    </message>
+    <message>
+        <source>A câmera tirou a foto, mas ela não chegou ao PC. Ative o log de depuração nas configurações e tente de novo para investigar.</source>
+        <translation>The camera took the photo, but it did not reach the PC. Turn on the debug log in the settings and try again to investigate.</translation>
+    </message>
+    <message>
+        <source>A câmera está em foco manual (MF). Mude o modo de foco para AF para focar com um clique.</source>
+        <translation>The camera is in manual focus (MF). Change the focus mode to AF to focus with a click.</translation>
+    </message>
+    <message>
+        <source>Esta câmera não permite escolher o ponto de foco pelo app neste modo.</source>
+        <translation>This camera does not let the app choose the focus point in this mode.</translation>
+    </message>
+    <message>
+        <source>Escolha a área de foco Ponto ou Zona para focar com um clique.</source>
+        <translation>Choose the Spot or Zone focus area to focus with a click.</translation>
+    </message>
 </context>
 <context>
     <name>kl::FakeBackend</name>
@@ -1129,6 +1173,14 @@ Full licenses and notices: [github.com/dionatansimioni/KamLynk](https://github.c
     <message>
         <source>Já existe uma conexão ativa</source>
         <translation>A connection is already active</translation>
+    </message>
+    <message>
+        <source>Não foi possível criar a pasta das fotos: %1</source>
+        <translation>Could not create the photo folder: %1</translation>
+    </message>
+    <message>
+        <source>A câmera não aceitou a pasta das fotos (%1): %2</source>
+        <translation>The camera did not accept the photo folder (%1): %2</translation>
     </message>
 </context>
 <context>

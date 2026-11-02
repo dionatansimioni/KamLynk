@@ -1,18 +1,17 @@
 #include "app/AppSetup.h"
 #include "app/KeychainStore.h"
 #include "core/CameraController.h"
+#include "core/DebugLog.h"
 #include "core/DesktopIntegration.h"
 #include "core/FakeBackend.h"
 #include "core/Language.h"
 #include "sdk/SonyBackend.h"
 
 #include <QCommandLineParser>
-#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
 #include <QIcon>
-#include <QMutex>
 #include <QQmlApplicationEngine>
 #include <QQmlExtensionPlugin>
 #include <QQuickStyle>
@@ -31,40 +30,6 @@ struct Cli
     Q_DECLARE_TR_FUNCTIONS(CommandLine)
 };
 
-QFile *g_logFile = nullptr;
-QtMessageHandler g_previousHandler = nullptr;
-
-// Mirrors every log line to ~/.local/share/KamLynk/kamlynk.log for bug reports.
-void logToFile(QtMsgType type, const QMessageLogContext &context, const QString &message)
-{
-    static QMutex mutex;
-    {
-        QMutexLocker lock(&mutex);
-        if (g_logFile) {
-            static const char *levels[] = {"DEBUG", "WARN", "CRIT", "FATAL", "INFO"};
-            const QString line = QStringLiteral("%1 [%2] %3\n")
-                                     .arg(QDateTime::currentDateTime().toString(Qt::ISODateWithMs),
-                                          QLatin1String(levels[type]), message);
-            g_logFile->write(line.toUtf8());
-            g_logFile->flush();
-        }
-    }
-    if (g_previousHandler)
-        g_previousHandler(type, context, message);
-}
-
-void setupLogging()
-{
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    QDir().mkpath(dir);
-    g_logFile = new QFile(QDir(dir).filePath(QStringLiteral("kamlynk.log")));
-    if (!g_logFile->open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        delete g_logFile;
-        g_logFile = nullptr;
-    }
-    g_previousHandler = qInstallMessageHandler(logToFile);
-}
-
 } // namespace
 
 int main(int argc, char *argv[])
@@ -76,9 +41,9 @@ int main(int argc, char *argv[])
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/packaging/kamlynk.svg")));
 
     // Before anything shows text (also --help). Shared by demo mode.
-    QSettings languageSettings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("KamLynk"),
+    QSettings appSettings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("KamLynk"),
                                QStringLiteral("kamlynk"));
-    kl::Language language(&languageSettings);
+    kl::Language language(&appSettings);
 
     QCommandLineParser parser;
     parser.setApplicationDescription(Cli::tr("Controle remoto para câmeras Sony"));
@@ -113,7 +78,10 @@ int main(int argc, char *argv[])
         return result;
     }
 
-    setupLogging();
+    // ~/.local/share/KamLynk/kamlynk.log, only when turned on in the settings.
+    kl::DebugLog debugLog(QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation))
+                              .filePath(QStringLiteral("kamlynk.log")),
+                          &appSettings);
 
     // Running as AppImage: register the .desktop entry + icon so KDE/GNOME (Wayland) show the
     // app icon and list KamLynk in the menu. Skipped for screenshots/demo runs.
@@ -158,7 +126,7 @@ int main(int argc, char *argv[])
     // Screenshots skip the first-start terms without saving an acceptance.
     if (parser.isSet(screenshot))
         controller.setTermsAccepted(true, false);
-    kl::registerQmlTypes(&controller, &language);
+    kl::registerQmlTypes(&controller, &language, &debugLog);
 
     QQmlApplicationEngine engine;
     kl::retranslateOnLanguageChange(&language, &engine, &controller);

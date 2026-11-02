@@ -14,7 +14,7 @@ ColumnLayout {
 
     Label {
         Layout.fillWidth: true
-        visible: Camera.touchFocusAvailable
+        visible: Camera.focusPointAvailable
         wrapMode: Text.Wrap
         color: Theme.textDim
         font.pixelSize: 12
@@ -22,8 +22,8 @@ ColumnLayout {
     }
     IconButton {
         Layout.fillWidth: true
-        visible: Camera.touchFocusAvailable
-        text: qsTr("Cancelar foco por toque")
+        visible: Camera.focusPointAvailable
+        text: qsTr("Cancelar foco por clique")
         size: 32
         onClicked: Camera.cancelTouchFocus()
     }

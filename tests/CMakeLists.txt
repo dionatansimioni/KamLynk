@@ -16,6 +16,7 @@ kamlynk_add_test(tst_usbsetup kamlynk_core)
 kamlynk_add_test(tst_desktopintegration kamlynk_core)
 kamlynk_add_test(tst_devicehistory kamlynk_core)
 kamlynk_add_test(tst_language kamlynk_core)
+kamlynk_add_test(tst_debuglog kamlynk_core)
 
 # End-to-end: the real executable must load the Sony SDK and its CrAdapter plugins.
 add_test(NAME sdk_runtime COMMAND kamlynk --sdk-check)

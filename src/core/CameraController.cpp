@@ -145,7 +145,17 @@ CameraController::CameraController(CameraBackend *backend, QSettings *settings, 
     });
     connect(m_backend, &CameraBackend::propertiesUpdated, this, &CameraController::onPropertiesUpdated);
     connect(m_backend, &CameraBackend::liveViewFrame, this, &CameraController::onFrame);
+    connect(m_backend, &CameraBackend::captured, this, [this] {
+        qInfo() << "photo taken";
+        if (m_photoState == PhotoState::Shooting) {
+            m_photoState = PhotoState::Transferring;
+            m_photoTimer.start(m_photoTransferTimeout);
+        }
+    });
     connect(m_backend, &CameraBackend::downloadCompleted, this, [this](const QString &path) {
+        m_photoState = PhotoState::None;
+        m_photoTimer.stop();
+        setPhotoError({});
         m_lastDownload = path;
         emit lastDownloadChanged();
         emit photoSaved(path);
@@ -204,6 +214,9 @@ CameraController::CameraController(CameraBackend *backend, QSettings *settings, 
         else if (request == RecordRequest::Stop && recording())
             setRecordingError(tr("A câmera não parou a gravação. Pare pelo botão da câmera."));
     });
+
+    m_photoTimer.setSingleShot(true);
+    connect(&m_photoTimer, &QTimer::timeout, this, &CameraController::onPhotoTimeout);
 
     m_recordingTicker.setInterval(250);
     connect(&m_recordingTicker, &QTimer::timeout, this, [this] {
@@ -653,6 +666,10 @@ void CameraController::onDisconnected(const QString &reason)
     emit lowBatteryChanged();
     m_recordRequest = RecordRequest::None;
     m_recordConfirmTimer.stop();
+    m_photoState = PhotoState::None;
+    m_photoTimer.stop();
+    m_pendingFocusPoint = -1;
+    m_focusAreaBeforePoint = -1;
     m_status.clear();
     for (CameraProperty *p : std::as_const(m_properties))
         p->reset();
@@ -681,14 +698,20 @@ void CameraController::onPropertiesUpdated(const PropertyList &properties)
     updateLowBattery();
     emit statusChanged();
 
-    // Photos are only transferred when the camera saves to the host as well.
+    // Photos are only transferred when the camera saves to the host as well. The setting can
+    // be locked at first (e.g. in movie mode): try again once it can be changed.
     CameraProperty *dest = saveDestination();
-    if (!m_destinationAdjusted && dest->available()) {
+    if (!m_destinationAdjusted && dest->available() && dest->writable()) {
         m_destinationAdjusted = true;
-        if (dest->writable() && dest->rawValue() == SDK::CrStillImageStoreDestination_MemoryCard
+        qInfo().noquote() << "photo destination:" << dest->text();
+        if (dest->rawValue() == SDK::CrStillImageStoreDestination_MemoryCard
             && dest->candidates().contains(SDK::CrStillImageStoreDestination_HostPCAndMemoryCard))
             dest->setValue(SDK::CrStillImageStoreDestination_HostPCAndMemoryCard);
     }
+
+    // The focus area was switched to a spot for a click: now move it there.
+    if (m_pendingFocusPoint >= 0 && codec::focusAreaHasPosition(focusArea()->rawValue()))
+        applyFocusPoint(quint32(std::exchange(m_pendingFocusPoint, -1)));
 }
 
 void CameraController::onFrame(const QImage &frame)
@@ -771,6 +794,48 @@ void CameraController::setRecordingError(const QString &message)
 void CameraController::dismissRecordingError()
 {
     setRecordingError({});
+}
+
+void CameraController::setPhotoError(const QString &message)
+{
+    if (m_photoError == message)
+        return;
+    m_photoError = message;
+    if (!message.isEmpty())
+        qInfo().noquote() << "Photo:" << message;
+    emit photoErrorChanged();
+}
+
+void CameraController::dismissPhotoError()
+{
+    setPhotoError({});
+}
+
+void CameraController::onPhotoTimeout()
+{
+    const PhotoState state = std::exchange(m_photoState, PhotoState::None);
+    if (m_state != Connected || state == PhotoState::None)
+        return;
+    if (state == PhotoState::Shooting) {
+        if (movieMode())
+            setPhotoError(tr("A câmera está no modo de vídeo, que não tira fotos. Mude para o modo de foto "
+                             "(botão de modo da câmera ou “Modo” no painel)."));
+        else
+            setPhotoError(tr("A câmera não tirou a foto. Com foco automático ela só dispara depois de "
+                             "conseguir focar; confira também o cartão de memória."));
+        return;
+    }
+    if (saveDestination()->rawValue() == SDK::CrStillImageStoreDestination_MemoryCard)
+        setPhotoError(tr("A foto foi salva só no cartão de memória. Para recebê-la no PC, escolha "
+                         "“PC + cartão” em “Salvar fotos em”."));
+    else
+        setPhotoError(tr("A câmera tirou a foto, mas ela não chegou ao PC. Ative o log de depuração "
+                         "nas configurações e tente de novo para investigar."));
+}
+
+bool CameraController::movieMode() const
+{
+    return codec::isMovieMode(statusValue(SDK::CrDeviceProperty_ExposureProgramMode, 0));
 }
 
 qint64 CameraController::statusValue(quint32 code, qint64 fallback) const
@@ -945,6 +1010,21 @@ bool CameraController::touchFocusAvailable() const
         && statusValue(SDK::CrDeviceProperty_RemoteTouchOperationEnableStatus, 0) == SDK::CrRemoteTouchOperation_Enable;
 }
 
+bool CameraController::afAreaFocusAvailable() const
+{
+    if (!m_status.contains(SDK::CrDeviceProperty_AF_Area_Position)
+        || statusValue(SDK::CrDeviceProperty_FocusMode, SDK::CrFocus_MF) == SDK::CrFocus_MF)
+        return false;
+    // A wide/center area has no position: it must be switchable to a spot.
+    const CameraProperty *area = focusArea();
+    return codec::focusAreaHasPosition(area->rawValue()) || area->writable();
+}
+
+bool CameraController::focusPointAvailable() const
+{
+    return touchFocusAvailable() || afAreaFocusAvailable();
+}
+
 bool CameraController::manualFocusAvailable() const
 {
     return isWritable(SDK::CrDeviceProperty_NearFar);
@@ -984,24 +1064,101 @@ void CameraController::capturePhoto()
 {
     if (m_state != Connected)
         return;
+    qInfo().noquote() << "photo: mode" << exposureMode()->text() << "destination"
+                      << saveDestination()->text();
+    setPhotoError({});
+    m_photoState = PhotoState::Shooting;
+    m_photoTimer.start(m_photoCaptureTimeout);
     m_backend->sendCommand(CameraBackend::Command::Release, true);
     QTimer::singleShot(100, this, [this] { m_backend->sendCommand(CameraBackend::Command::Release, false); });
 }
 
 void CameraController::touchFocus(double nx, double ny)
 {
-    if (m_state != Connected || !touchFocusAvailable())
+    if (m_state != Connected)
         return;
-    m_backend->setProperty(SDK::CrDeviceProperty_RemoteTouchOperation, codec::packTouchPosition(nx, ny),
-                           dataTypeOf(SDK::CrDeviceProperty_RemoteTouchOperation, SDK::CrDataType_UInt32));
+    const quint32 point = codec::packTouchPosition(nx, ny);
+    if (touchFocusAvailable()) {
+        qInfo() << "focus: remote touch at" << (point >> 16) << (point & 0xFFFF);
+        m_backend->setProperty(SDK::CrDeviceProperty_RemoteTouchOperation, point,
+                               dataTypeOf(SDK::CrDeviceProperty_RemoteTouchOperation, SDK::CrDataType_UInt32));
+        return;
+    }
+    if (!afAreaFocusAvailable()) {
+        qInfo() << "focus: click ignored, mode" << statusValue(SDK::CrDeviceProperty_FocusMode, 0)
+                << "touch status" << statusValue(SDK::CrDeviceProperty_RemoteTouchOperationEnableStatus, -1)
+                << "AF area position" << m_status.contains(SDK::CrDeviceProperty_AF_Area_Position);
+        setStatusMessage(statusValue(SDK::CrDeviceProperty_FocusMode, 0) == SDK::CrFocus_MF
+                             ? tr("A câmera está em foco manual (MF). Mude o modo de foco para AF para focar "
+                                  "com um clique.")
+                             : tr("Esta câmera não permite escolher o ponto de foco pelo app neste modo."));
+        return;
+    }
+    CameraProperty *area = focusArea();
+    if (codec::focusAreaHasPosition(area->rawValue())) {
+        applyFocusPoint(point);
+        return;
+    }
+    // Wide/center areas have no position: switch to a spot, then move it once the camera
+    // confirms (onPropertiesUpdated). cancelTouchFocus() brings the old area back.
+    const QVector<qint64> candidates = area->candidates();
+    for (qint64 spot : {SDK::CrFocusArea_Flexible_Spot_M, SDK::CrFocusArea_Flexible_Spot_S,
+                        SDK::CrFocusArea_Flexible_Spot_L, SDK::CrFocusArea_Flexible_Spot,
+                        SDK::CrFocusArea_Expand_Flexible_Spot, SDK::CrFocusArea_Tracking_Flexible_Spot_M,
+                        SDK::CrFocusArea_Zone}) {
+        if (!candidates.contains(spot))
+            continue;
+        qInfo().noquote() << "focus: switching area from" << area->text() << "to a spot";
+        if (m_focusAreaBeforePoint < 0)
+            m_focusAreaBeforePoint = area->rawValue();
+        m_pendingFocusPoint = point;
+        area->setValue(spot);
+        return;
+    }
+    setStatusMessage(tr("Escolha a área de foco Ponto ou Zona para focar com um clique."));
+}
+
+void CameraController::applyFocusPoint(quint32 point)
+{
+    quint32 x = point >> 16;
+    quint32 y = point & 0xFFFF;
+    // The camera only accepts positions where the whole AF frame fits.
+    const PropertyInfo info = m_status.value(SDK::CrDeviceProperty_AF_Area_Position);
+    if (info.isRange && info.rangeMax > info.rangeMin) {
+        const auto lo = quint32(info.rangeMin), hi = quint32(info.rangeMax);
+        x = std::clamp(x, lo >> 16, hi >> 16);
+        y = std::clamp(y, lo & 0xFFFF, hi & 0xFFFF);
+    }
+    qInfo() << "focus: AF area at" << x << y;
+    m_backend->setProperty(SDK::CrDeviceProperty_AF_Area_Position, qint64((x << 16) | y),
+                           dataTypeOf(SDK::CrDeviceProperty_AF_Area_Position, SDK::CrDataType_UInt32));
+    // For photos the camera focuses on a half-press; in movie mode it keeps focusing by itself.
+    if (movieMode() || !isWritable(SDK::CrDeviceProperty_S1))
+        return;
+    const quint32 s1Type = dataTypeOf(SDK::CrDeviceProperty_S1, SDK::CrDataType_UInt16);
+    m_backend->setProperty(SDK::CrDeviceProperty_S1, SDK::CrLockIndicator_Locked, s1Type);
+    QTimer::singleShot(600, this, [this, s1Type] {
+        if (m_state == Connected)
+            m_backend->setProperty(SDK::CrDeviceProperty_S1, SDK::CrLockIndicator_Unlocked, s1Type);
+    });
 }
 
 void CameraController::cancelTouchFocus()
 {
     if (m_state != Connected)
         return;
-    m_backend->sendCommand(CameraBackend::Command::CancelRemoteTouch, true);
-    m_backend->sendCommand(CameraBackend::Command::CancelRemoteTouch, false);
+    if (touchFocusAvailable()) {
+        m_backend->sendCommand(CameraBackend::Command::CancelRemoteTouch, true);
+        m_backend->sendCommand(CameraBackend::Command::CancelRemoteTouch, false);
+        return;
+    }
+    m_pendingFocusPoint = -1;
+    if (m_focusAreaBeforePoint >= 0) {
+        focusArea()->setValue(std::exchange(m_focusAreaBeforePoint, -1));
+        return;
+    }
+    if (afAreaFocusAvailable() && codec::focusAreaHasPosition(focusArea()->rawValue()))
+        applyFocusPoint(codec::packTouchPosition(0.5, 0.5));
 }
 
 void CameraController::focusStep(int step)

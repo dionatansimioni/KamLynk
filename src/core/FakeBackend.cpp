@@ -60,7 +60,9 @@ void FakeBackend::seedProperties()
             {-3000, -2700, -2300, -2000, -1700, -1300, -1000, -700, -300, 0, 300, 700, 1000, 1300, 1700, 2000,
              2300, 2700, 3000}, true);
     addProp(CrDeviceProperty_ExposureProgramMode, CrDataType_UInt32Array, CrExposure_Movie_M,
-            {CrExposure_Movie_P, CrExposure_Movie_A, CrExposure_Movie_S, CrExposure_Movie_M, CrExposure_Movie_Auto},
+            {CrExposure_Movie_P, CrExposure_Movie_A, CrExposure_Movie_S, CrExposure_Movie_M, CrExposure_Movie_Auto,
+             CrExposure_P_Auto, CrExposure_A_AperturePriority, CrExposure_S_ShutterSpeedPriority,
+             CrExposure_M_Manual},
             true);
     addProp(CrDeviceProperty_WhiteBalance, CrDataType_UInt16Array, CrWhiteBalance_AWB,
             {CrWhiteBalance_AWB, CrWhiteBalance_Daylight, CrWhiteBalance_Shadow, CrWhiteBalance_Cloudy,
@@ -114,6 +116,10 @@ void FakeBackend::seedProperties()
     addProp(CrDeviceProperty_RemoteTouchOperationEnableStatus, CrDataType_UInt8Array, CrRemoteTouchOperation_Enable,
             {}, false);
     addProp(CrDeviceProperty_RemoteTouchOperation, CrDataType_UInt32Range, 0, {0, 0xFFFFFFFF, 1}, true);
+    addProp(CrDeviceProperty_AF_Area_Position, CrDataType_UInt32Range, (320 << 16) | 240,
+            {(16 << 16) | 12, (623 << 16) | 467, 1}, true);
+    addProp(CrDeviceProperty_S1, CrDataType_UInt16Array, CrLockIndicator_Unlocked,
+            {CrLockIndicator_Unlocked, CrLockIndicator_Locked}, true);
     addProp(CrDeviceProperty_NearFar, CrDataType_Int16Range, 0, {-7, 7, 1}, true);
     addProp(CrDeviceProperty_Zoom_Operation_Status, CrDataType_UInt8Array, CrZoomOperationEnableStatus_Enable, {},
             false);
@@ -212,6 +218,15 @@ void FakeBackend::setPropertyValue(quint32 code, qint64 value)
     update(code, value);
 }
 
+void FakeBackend::setPropertyWritable(quint32 code, bool writable)
+{
+    auto it = m_props.find(code);
+    if (it == m_props.end())
+        return;
+    it->writable = writable;
+    update(code, it->current);
+}
+
 void FakeBackend::setProperty(quint32 code, qint64 value, quint32 dataType)
 {
     Q_UNUSED(dataType)
@@ -242,6 +257,12 @@ void FakeBackend::sendCommand(Command command, bool down)
             update(SDK::CrDeviceProperty_RecordingState,
                    down ? SDK::CrMovie_Recording_State_Recording : SDK::CrMovie_Recording_State_Not_Recording);
     } else if (command == Command::Release && !down) {
+        // Like the ZV-E10 II: the shutter takes no photo in movie mode.
+        if (codec::isMovieMode(m_props.value(SDK::CrDeviceProperty_ExposureProgramMode).current))
+            return;
+        QMetaObject::invokeMethod(this, [this] { emit captured(); }, Qt::QueuedConnection);
+        if (!m_transfersPhotos)
+            return;
         const qint64 dest = m_props.value(SDK::CrDeviceProperty_StillImageStoreDestination).current;
         if (dest == SDK::CrStillImageStoreDestination_MemoryCard || m_downloadDir.isEmpty())
             return;

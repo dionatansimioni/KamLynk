@@ -73,6 +73,7 @@ add_library(kamlynk_core STATIC
     src/core/CredentialStore.h src/core/CredentialStore.cpp
     src/core/DeviceHistory.h src/core/DeviceHistory.cpp
     src/core/Language.h src/core/Language.cpp
+    src/core/DebugLog.h src/core/DebugLog.cpp
 )
 target_compile_definitions(kamlynk_core PRIVATE KAMLYNK_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(kamlynk_core PUBLIC src)

@@ -48,6 +48,8 @@ class CameraController : public QObject
     Q_PROPERTY(bool lowBattery READ lowBattery NOTIFY lowBatteryChanged)
     Q_PROPERTY(bool reconnecting READ reconnecting NOTIFY reconnectingChanged)
     Q_PROPERTY(bool touchFocusAvailable READ touchFocusAvailable NOTIFY statusChanged)
+    // Clicking the preview focuses there (remote touch, or by moving the AF area).
+    Q_PROPERTY(bool focusPointAvailable READ focusPointAvailable NOTIFY statusChanged)
     Q_PROPERTY(bool manualFocusAvailable READ manualFocusAvailable NOTIFY statusChanged)
     Q_PROPERTY(bool zoomAvailable READ zoomAvailable NOTIFY statusChanged)
     Q_PROPERTY(QString lastDownload READ lastDownload NOTIFY lastDownloadChanged)
@@ -62,6 +64,8 @@ class CameraController : public QObject
     Q_PROPERTY(QString lastCamera READ lastCamera NOTIFY lastCameraChanged)
     Q_PROPERTY(bool mirrorPreview READ mirrorPreview WRITE setMirrorPreview NOTIFY mirrorPreviewChanged)
     Q_PROPERTY(QString recordingError READ recordingError NOTIFY recordingErrorChanged)
+    // Why the last photo was not taken or did not reach the PC; empty when fine.
+    Q_PROPERTY(QString photoError READ photoError NOTIFY photoErrorChanged)
     // The user accepted the terms shown on first start (Sony SDK conditions).
     Q_PROPERTY(bool termsAccepted READ termsAccepted NOTIFY termsAcceptedChanged)
 
@@ -133,6 +137,7 @@ public:
     void setConnectionLossTimeout(int ms) { m_lostTimer.setInterval(ms); }
     static constexpr int kLowBatteryPercent = 5;
     bool touchFocusAvailable() const;
+    bool focusPointAvailable() const;
     bool manualFocusAvailable() const;
     bool zoomAvailable() const;
     QString lastDownload() const { return m_lastDownload; }
@@ -148,6 +153,7 @@ public:
     bool mirrorPreview() const { return m_mirrorPreview; }
     void setMirrorPreview(bool mirrored);
     QString recordingError() const { return m_recordingError; }
+    QString photoError() const { return m_photoError; }
     bool termsAccepted() const { return m_termsAccepted; }
     // `remember` saves the acceptance in the settings; otherwise it lasts for this session.
     void setTermsAccepted(bool accepted, bool remember = true);
@@ -160,6 +166,13 @@ public:
     // While idle on the connection screen, discovery repeats to keep online status fresh.
     void setRefreshInterval(int ms) { m_refreshTimer.setInterval(ms); }
     void setRecordConfirmTimeout(int ms) { m_recordConfirmTimer.setInterval(ms); }
+    // How long a photo may take to be shot, and then to arrive on the PC, before it is
+    // reported as a failure.
+    void setPhotoTimeouts(int captureMs, int transferMs)
+    {
+        m_photoCaptureTimeout = captureMs;
+        m_photoTransferTimeout = transferMs;
+    }
     static QStringList supportedModels();
     static int defaultModelIndex();
 
@@ -207,6 +220,7 @@ public:
     Q_INVOKABLE void focusStep(int step);
     Q_INVOKABLE void zoom(int direction);
     Q_INVOKABLE void dismissRecordingError();
+    Q_INVOKABLE void dismissPhotoError();
     Q_INVOKABLE void dismissLowBattery();
     Q_INVOKABLE void acceptTerms() { setTermsAccepted(true); }
     // The UI language changed: re-emits every text this object exposes.
@@ -229,6 +243,7 @@ signals:
     void devicesChanged();
     void mirrorPreviewChanged();
     void recordingErrorChanged();
+    void photoErrorChanged();
     void termsAcceptedChanged();
     void liveViewFpsChanged();
     void lowBatteryChanged();
@@ -246,6 +261,12 @@ private:
     void checkRecordingOutcome(qint64 previousState);
     void setRecordingError(const QString &message);
     QString recordingFailureHint() const;
+    void setPhotoError(const QString &message);
+    void onPhotoTimeout();
+    bool movieMode() const;
+    // Focus by clicking when the camera has no remote touch: moves the AF area there.
+    bool afAreaFocusAvailable() const;
+    void applyFocusPoint(quint32 point);
     void beginConnect(const CameraDescriptor &camera, std::function<void(const Credentials &)> connect);
     void finishAutoConnect(const QString &message);
     void recordConnection();
@@ -283,6 +304,16 @@ private:
     RecordRequest m_recordRequest = RecordRequest::None;
     QTimer m_recordConfirmTimer;
     QString m_recordingError;
+
+    enum class PhotoState { None, Shooting, Transferring };
+    PhotoState m_photoState = PhotoState::None;
+    QTimer m_photoTimer;
+    int m_photoCaptureTimeout = 4000;
+    int m_photoTransferTimeout = 15000;
+    QString m_photoError;
+
+    qint64 m_pendingFocusPoint = -1;     // waits for the focus area switched to a spot
+    qint64 m_focusAreaBeforePoint = -1;  // restored by cancelTouchFocus()
 
     QSettings *m_settings;
     CameraDescriptor m_connecting;   // camera of the connection in progress

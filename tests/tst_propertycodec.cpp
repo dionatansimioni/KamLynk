@@ -13,6 +13,28 @@ class TestPropertyCodec : public QObject
 {
     Q_OBJECT
 private slots:
+    void movieModesAreRecognized()
+    {
+        using namespace SCRSDK;
+        for (quint32 mode : {CrExposure_Movie_P, CrExposure_Movie_M, CrExposure_Movie_SQMotion_F, CrExposure_SQMotion_M,
+                             CrExposure_HiFrameRate_A, CrExposure_MOVIE, CrExposure_Movie_IntervalRec_AUTO})
+            QVERIFY2(codec::isMovieMode(mode), qPrintable(QString::number(mode, 16)));
+        for (quint32 mode : {CrExposure_M_Manual, CrExposure_P_Auto, CrExposure_Auto, CrExposure_STILL,
+                             CrExposure_SweepPanorama, CrExposure_Flash_Off})
+            QVERIFY2(!codec::isMovieMode(mode), qPrintable(QString::number(mode, 16)));
+    }
+
+    void focusAreasWithPosition()
+    {
+        using namespace SCRSDK;
+        for (quint16 area : {CrFocusArea_Zone, CrFocusArea_Flexible_Spot_M, CrFocusArea_Expand_Flexible_Spot,
+                             CrFocusArea_Tracking_Flexible_Spot_S, CrFocusArea_Flexible_Spot_XL})
+            QVERIFY(codec::focusAreaHasPosition(area));
+        for (quint16 area : {CrFocusArea_Unknown, CrFocusArea_Wide, CrFocusArea_Center, CrFocusArea_Tracking_Wide,
+                             CrFocusArea_Tracking_Center})
+            QVERIFY(!codec::focusAreaHasPosition(area));
+    }
+
     void elementSizes()
     {
         QCOMPARE(codec::elementSize(SDK::CrDataType_UInt8Array), 1);

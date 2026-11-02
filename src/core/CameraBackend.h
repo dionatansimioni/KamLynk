@@ -65,6 +65,8 @@ signals:
     void reconnected();
     void propertiesUpdated(const kl::PropertyList &properties);
     void liveViewFrame(const QImage &frame);
+    // The camera took a photo (before any transfer to the PC).
+    void captured();
     void downloadCompleted(const QString &path);
     void warning(const QString &message);
 };

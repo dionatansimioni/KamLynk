@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import KamLynk.Backend
 import KamLynk
 
-// App preferences. The language applies immediately and is remembered.
+// App preferences. Each change applies immediately and is remembered.
 Dialog {
     id: dialog
     objectName: "settingsDialog"
@@ -42,6 +42,36 @@ Dialog {
                 ButtonGroup.group: languageGroup
                 onClicked: Language.choice = modelData.code
             }
+        }
+
+        Label {
+            Layout.topMargin: 12
+            text: qsTr("Depuração")
+            font.pixelSize: 15
+            font.weight: Font.DemiBold
+            color: Theme.text
+        }
+        Switch {
+            objectName: "debugLogSwitch"
+            Layout.fillWidth: true
+            text: qsTr("Registrar log de depuração")
+            checked: DebugLog.enabled
+            onToggled: DebugLog.enabled = checked
+        }
+        Label {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: Theme.textDim
+            font.pixelSize: 12
+            text: qsTr("Grava o que o app faz em um arquivo, para enviar junto com relatos de problemas. "
+                       + "Continua ligado depois de reabrir o app. Arquivo: %1").arg(DebugLog.filePath)
+        }
+        Button {
+            objectName: "openLogFolder"
+            visible: DebugLog.enabled
+            flat: true
+            text: qsTr("Abrir pasta do log")
+            onClicked: DebugLog.openFolder()
         }
     }
 }

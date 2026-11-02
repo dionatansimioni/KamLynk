@@ -118,14 +118,19 @@ Item {
                         }
                     }
 
+                    // Always clickable: when the camera cannot focus there, the click explains why.
                     MouseArea {
+                        objectName: "focusArea"
                         anchors.fill: parent
-                        enabled: Camera.touchFocusAvailable
-                        cursorShape: enabled ? Qt.CrossCursor : Qt.ArrowCursor
+                        cursorShape: Camera.focusPointAvailable ? Qt.CrossCursor : Qt.ArrowCursor
                         onClicked: mouse => {
                             const p = liveView.normalizedPoint(mouse.x, mouse.y)
                             if (p.x < 0)
                                 return
+                            if (!Camera.focusPointAvailable) {
+                                Camera.touchFocus(p.x, p.y)
+                                return
+                            }
                             reticle.x = mouse.x - reticle.width / 2
                             reticle.y = mouse.y - reticle.height / 2
                             reticleFade.restart()
@@ -133,10 +138,12 @@ Item {
                         }
                     }
 
-                    // Recording refused or stopped by the camera.
+                    // Recording refused or stopped by the camera, or a photo that did not come.
                     Rectangle {
                         id: recordingAlert
                         objectName: "recordingAlert"
+                        readonly property string message: Camera.recordingError.length > 0
+                                                          ? Camera.recordingError : Camera.photoError
                         anchors.top: parent.top
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.topMargin: 16
@@ -144,7 +151,7 @@ Item {
                         height: alertRow.implicitHeight + 20
                         radius: Theme.radius
                         color: Theme.record
-                        visible: Camera.recordingError.length > 0
+                        visible: message.length > 0
                         RowLayout {
                             id: alertRow
                             anchors.fill: parent
@@ -154,7 +161,7 @@ Item {
                             Label {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: recordingAlert.parent.width - 120
-                                text: Camera.recordingError
+                                text: recordingAlert.message
                                 color: "white"
                                 font.pixelSize: 15
                                 font.weight: Font.DemiBold
@@ -162,7 +169,10 @@ Item {
                             }
                             ToolButton {
                                 text: "✕"
-                                onClicked: Camera.dismissRecordingError()
+                                onClicked: {
+                                    Camera.dismissRecordingError()
+                                    Camera.dismissPhotoError()
+                                }
                             }
                         }
                     }

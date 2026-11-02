@@ -60,8 +60,9 @@ public:
         m_backend->post([b = m_backend, list] { b->loadProperties(list); });
     }
 
-    void OnCompleteDownload(CrChar *filename, CrInt32u) override
+    void OnCompleteDownload(CrChar *filename, CrInt32u type) override
     {
+        qInfo() << "SDK OnCompleteDownload" << (filename ? QString::fromLocal8Bit(filename) : QString()) << type;
         if (filename)
             emit m_backend->downloadCompleted(QString::fromLocal8Bit(filename));
     }
@@ -76,6 +77,9 @@ public:
         case SDK::CrWarning_Connect_Reconnected:
             emit m_backend->reconnected();
             m_backend->post([b = m_backend] { b->loadProperties({}); });
+            break;
+        case SDK::CrNotify_Captured_Event:
+            emit m_backend->captured();
             break;
         case SDK::CrWarning_File_StorageFull:
             emit m_backend->warning(SonyBackend::tr("Cartão de memória cheio"));
@@ -584,6 +588,7 @@ void SonyBackend::sendCommand(Command command, bool down)
         }
         const SDK::CrError err =
             SDK::SendCommand(m_handle, id, down ? SDK::CrCommandParam_Down : SDK::CrCommandParam_Up);
+        qInfo() << "command" << command << (down ? "down" : "up") << "->" << Qt::hex << err;
         if (CR_FAILED(err))
             emit warning(codec::describeError(err));
     });
@@ -601,10 +606,19 @@ void SonyBackend::applySaveInfo()
 {
     if (!m_handle || m_downloadDir.isEmpty())
         return;
-    QDir().mkpath(m_downloadDir);
+    if (!QDir().mkpath(m_downloadDir)) {
+        emit warning(tr("Não foi possível criar a pasta das fotos: %1").arg(m_downloadDir));
+        return;
+    }
     QByteArray path = QDir::toNativeSeparators(m_downloadDir).toLocal8Bit();
-    QByteArray prefix("KL");
-    SDK::SetSaveInfo(m_handle, path.data(), prefix.data(), SDK::CrSETSAVEINFO_AUTO_NUMBER);
+    // Camera file names (DSC00001.JPG). A prefix only applies with a start number; mixing a
+    // prefix with the automatic number is not a documented combination.
+    QByteArray prefix("");
+    const SDK::CrError err = SDK::SetSaveInfo(m_handle, path.data(), prefix.data(), SDK::CrSETSAVEINFO_AUTO_NUMBER);
+    qInfo().noquote() << "SetSaveInfo" << m_downloadDir << "->" << Qt::hex << err;
+    if (CR_FAILED(err))
+        emit warning(tr("A câmera não aceitou a pasta das fotos (%1): %2")
+                         .arg(m_downloadDir, codec::describeError(err)));
 }
 
 void SonyBackend::setLiveViewEnabled(bool enabled)
